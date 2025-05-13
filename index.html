@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consultas Judiciales</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f8f9fa; padding: 2rem; max-width: 700px; margin: auto; }
+    textarea, button { width: 100%; margin-top: 1rem; padding: 1rem; font-size: 1rem; }
+    button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #0056b3; }
+    .respuesta { background-color: #ffffff; padding: 1rem; margin-top: 2rem; border-left: 4px solid #007bff; white-space: pre-wrap; }
+
+    footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #f9f9f9;
+  padding: 10px 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-logos {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 0 20px;
+  gap: 20px; /* espacio uniforme entre logos */
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+}
+
+.footer-logos img {
+  flex: 1 1 auto;
+  height: 60px;
+  width: auto;
+  max-width: 200px;
+  
+  object-fit: contain;
+  opacity: 0.95;
+}
+
+@media (max-width: 480px) {
+  .footer-logos {
+    gap: 10px;
+    padding: 0 10px;
+  }
+
+  .footer-logos img {
+    height: 50px;
+    max-width: 120px;
+    
+  }
+}
+
+
+.page-container{
+  max-width: 700px;
+  margin:0 auto;
+  padding-bottom: 80px;
+}
+
+   
+  </style>
+
+</head>
+<body>
+  <div class="page-container">
+    <h1>Consulta sobre los candidatos y candidatas a la Suprema Corte de Justicia de la Nación</h1>
+
+    <p>Escribe una pregunta sobre la elección del primero de junio para Ministras y Ministros:</p>
+
+    <textarea id="query" rows="5" placeholder="Escribe tu pregunta..."></textarea>
+  
+    
+    <button onclick="consultar()">Enviar consulta</button>
+    
+
+    <div id="respuesta" class="respuesta" style="display: none;"></div>
+  </div>
+
+  <footer>
+    
+      <div class="footer-logos">
+    
+        <img src="/static/OMD.png" alt="Observatorio de Medios Digitales" onerror="this.style.display='Escuela de Humanidades y Educación';"/>
+
+        <img src="/static/Logo_EHE.png" alt="Escuela de Humanidades y Educación" onerror="this.style.display='Escuela de Humanidades y Educación';"/>
+
+        <img src="/static/logoHD4.png" alt="Laboratorio de Humanidades Digitales" onerror="this.style.display='Escuela de Humanidades y Educación'; style = 'max-width: 300px;'" />
+      </div>
+    
+  </footer>
+
+  <script>
+    async function consultar() {
+      const pregunta = document.getElementById("query").value;
+      const respuestaDiv = document.getElementById("respuesta");
+      respuestaDiv.style.display = "block";
+      respuestaDiv.textContent = "Consultando...";
+
+      try {
+        const res = await fetch(`https://ecda-2806-2a0-b1a-9690-fdea-b7a-9ef8-ca1f.ngrok-free.app/query/?q=${encodeURIComponent(pregunta)}`);
+        const data = await res.json();
+        respuestaDiv.textContent = data.response;
+
+        // Guardar en log CSV
+        await fetch("/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pregunta, respuesta: data.response })
+        });
+
+      } catch (error) {
+        respuestaDiv.textContent = "Ocurrió un error al consultar la API.";
+      }
+    }
+  </script>
+</body>
+</html>
