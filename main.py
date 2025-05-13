@@ -31,6 +31,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
 
 query_engine = setup_query_engine("ministros.xlsx")
 
