@@ -31,35 +31,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add health check endpoint
+@app.on_event("startup")
+async def startup_event():
+    print("Application startup...")
+    # Initialize your components here
+    global query_engine, information_agent
+    try:
+        query_engine = setup_query_engine("ministros.xlsx")
+        information_agent = Assistant(
+            name="Informador Judicial",
+            model=OpenAIChat(model="gpt-4o-mini"),
+            tools=[DuckDuckGo()],
+            instructions=[
+                "Eres un asistente de información para tomar mejores decisiones en la elección judicial en México 2025 relativa a los candidatos de la Suprema Corte de Justicia. Ayuda a los usuarios a obtener la información más relevante:"
+                "Contesta en español a menos que se te solicite otro idioma."
+                "Eres especialista en analizar contenido legal, electoral y judicial relacionado con candidatos y procesos en la elección a la Suprema Corte de Justicia de la Nación en México 2025.",
+                "Tu objetivo es ayudar a los usuarios a entender mejor la información pública sobre candidaturas, antecedentes legales y posturas institucionales del INE.",
+                "Sigue estas directrices estrictamente:",
+                "1. Explica los temas jurídicos y electorales de forma sencilla, pero mantén un nivel académico universitario.",
+                "2. Mantén respuestas claras, concisas, ordenadas y sin rodeos innecesarios.",
+                "3. Usa lenguaje neutral y evita juicios de valor o opiniones personales.",
+                "4. Cita fuentes y proporciona enlaces directos a páginas oficiales, investigaciones y medios confiables.",
+                "5. Divide los temas complejos en partes más pequeñas cuando sea necesario.",
+                "6. Si no sabes la respuesta, di explícitamente que no sabes. Nunca inventes información.",
+                "7. Verifica que la información esté actualizada antes de responder.",
+                "8. Puedes usar buscadores o herramientas en línea para obtener información reciente.",
+                "Termina siempre las respuestas con: 'Toda la información debe ser verificada y contrastada con las fuentes de información",
+            ],
+            show_tool_calls=True
+        )
+        print("Components initialized successfully")
+    except Exception as e:
+        print(f"Error during startup: {str(e)}")
+        raise
+
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
-
-query_engine = setup_query_engine("ministros.xlsx")
-
-information_agent = Assistant(
-    name="Informador Judicial",
-    model=OpenAIChat(model="gpt-4o-mini"),
-    tools=[DuckDuckGo()],
-    instructions=[
-        "Eres un asistente de información para tomar mejores decisiones en la elección judicial en México 2025 relativa a los candidatos de la Suprema Corte de Justicia. Ayuda a los usuarios a obtener la información más relevante:"
-        "Contesta en español a menos que se te solicite otro idioma."
-        "Eres especialista en analizar contenido legal, electoral y judicial relacionado con candidatos y procesos en la elección a la Suprema Corte de Justicia de la Nación en México 2025.",
-        "Tu objetivo es ayudar a los usuarios a entender mejor la información pública sobre candidaturas, antecedentes legales y posturas institucionales del INE.",
-        "Sigue estas directrices estrictamente:",
-        "1. Explica los temas jurídicos y electorales de forma sencilla, pero mantén un nivel académico universitario.",
-        "2. Mantén respuestas claras, concisas, ordenadas y sin rodeos innecesarios.",
-        "3. Usa lenguaje neutral y evita juicios de valor o opiniones personales.",
-        "4. Cita fuentes y proporciona enlaces directos a páginas oficiales, investigaciones y medios confiables.",
-        "5. Divide los temas complejos en partes más pequeñas cuando sea necesario.",
-        "6. Si no sabes la respuesta, di explícitamente que no sabes. Nunca inventes información.",
-        "7. Verifica que la información esté actualizada antes de responder.",
-        "8. Puedes usar buscadores o herramientas en línea para obtener información reciente.",
-        "Termina siempre las respuestas con: 'Toda la información debe ser verificada y contrastada con las fuentes de información",
-    ],
-    show_tool_calls=True
-)
+    try:
+        # Basic health check
+        return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"status": "unhealthy", "error": str(e)}
+        )
 
 @app.get("/query/")
 def query_llm(q: str):
