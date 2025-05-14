@@ -2,79 +2,79 @@
 import nest_asyncio
 nest_asyncio.apply()
 from fastapi import FastAPI
-app=FastAPI()
-from llm_engine import setup_query_engine
-from config import OPENAI_API_KEY
-from datetime import datetime
-#from crewai import Assistant
-#from crewai_tools import DuckDuckGo
-from langchain_openai import ChatOpenAI as OpenAIChat
-from phi.assistant import Assistant
-from phi.model.openai import OpenAIChat
-from phi.tools.duckduckgo import DuckDuckGo
-from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
-import csv
+import logging
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    print("Application startup...")
-    # Initialize your components here
-    global query_engine, information_agent
-    try:
-        query_engine = setup_query_engine("ministros.xlsx")
-        information_agent = Assistant(
-            name="Informador Judicial",
-            model=OpenAIChat(model="gpt-4o-mini"),
-            tools=[DuckDuckGo()],
-            instructions=[
-                "Eres un asistente de información para tomar mejores decisiones en la elección judicial en México 2025 relativa a los candidatos de la Suprema Corte de Justicia. Ayuda a los usuarios a obtener la información más relevante:"
-                "Contesta en español a menos que se te solicite otro idioma."
-                "Eres especialista en analizar contenido legal, electoral y judicial relacionado con candidatos y procesos en la elección a la Suprema Corte de Justicia de la Nación en México 2025.",
-                "Tu objetivo es ayudar a los usuarios a entender mejor la información pública sobre candidaturas, antecedentes legales y posturas institucionales del INE.",
-                "Sigue estas directrices estrictamente:",
-                "1. Explica los temas jurídicos y electorales de forma sencilla, pero mantén un nivel académico universitario.",
-                "2. Mantén respuestas claras, concisas, ordenadas y sin rodeos innecesarios.",
-                "3. Usa lenguaje neutral y evita juicios de valor o opiniones personales.",
-                "4. Cita fuentes y proporciona enlaces directos a páginas oficiales, investigaciones y medios confiables.",
-                "5. Divide los temas complejos en partes más pequeñas cuando sea necesario.",
-                "6. Si no sabes la respuesta, di explícitamente que no sabes. Nunca inventes información.",
-                "7. Verifica que la información esté actualizada antes de responder.",
-                "8. Puedes usar buscadores o herramientas en línea para obtener información reciente.",
-                "Termina siempre las respuestas con: 'Toda la información debe ser verificada y contrastada con las fuentes de información",
-            ],
-            show_tool_calls=True
-        )
-        print("Components initialized successfully")
-    except Exception as e:
-        print(f"Error during startup: {str(e)}")
-        raise
-
+# Simple health check endpoint
 @app.get("/health")
 async def health_check():
-    try:
-        # Basic health check
-        return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"status": "unhealthy", "error": str(e)}
-        )
+    logger.info("Health check requested")
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# Root endpoint
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "API is running"}
+
+# Initialize components
+try:
+    from llm_engine import setup_query_engine
+    from phi.assistant import Assistant
+    from phi.model.openai import OpenAIChat
+    from phi.tools.duckduckgo import DuckDuckGo
+
+    logger.info("Initializing components...")
+    
+    # Initialize query engine
+    query_engine = setup_query_engine("ministros.xlsx")
+    logger.info("Query engine initialized")
+    
+    # Initialize assistant
+    information_agent = Assistant(
+        name="Informador Judicial",
+        model=OpenAIChat(model="gpt-4o-mini"),  # Keep original model name
+        tools=[DuckDuckGo()],
+        instructions=[
+            "Eres un asistente de información para tomar mejores decisiones en la elección judicial en México 2025 relativa a los candidatos de la Suprema Corte de Justicia. Ayuda a los usuarios a obtener la información más relevante:"
+            "Contesta en español a menos que se te solicite otro idioma."
+            "Eres especialista en analizar contenido legal, electoral y judicial relacionado con candidatos y procesos en la elección a la Suprema Corte de Justicia de la Nación en México 2025.",
+            "Tu objetivo es ayudar a los usuarios a entender mejor la información pública sobre candidaturas, antecedentes legales y posturas institucionales del INE.",
+            "Sigue estas directrices estrictamente:",
+            "1. Explica los temas jurídicos y electorales de forma sencilla, pero mantén un nivel académico universitario.",
+            "2. Mantén respuestas claras, concisas, ordenadas y sin rodeos innecesarios.",
+            "3. Usa lenguaje neutral y evita juicios de valor o opiniones personales.",
+            "4. Cita fuentes y proporciona enlaces directos a páginas oficiales, investigaciones y medios confiables.",
+            "5. Divide los temas complejos en partes más pequeñas cuando sea necesario.",
+            "6. Si no sabes la respuesta, di explícitamente que no sabes. Nunca inventes información.",
+            "7. Verifica que la información esté actualizada antes de responder.",
+            "8. Puedes usar buscadores o herramientas en línea para obtener información reciente.",
+            "Termina siempre las respuestas con: 'Toda la información debe ser verificada y contrastada con las fuentes de información",
+        ],
+        show_tool_calls=True
+    )
+    logger.info("Assistant initialized")
+except Exception as e:
+    logger.error(f"Error during initialization: {str(e)}")
+    # Don't raise the error, just log it
+    pass
 
 @app.get("/query/")
 def query_llm(q: str):
@@ -112,7 +112,3 @@ async def guardar_log(item: dict):
         writer = csv.writer(file)
         writer.writerow([datetime.now().isoformat(), item.get("pregunta"), item.get("respuesta")])
     return {"status": "ok"}
-
-@app.get("/")
-def root():
-    return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
