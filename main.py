@@ -25,7 +25,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ecda-2806-2a0-b1a-9690-fdea-b7a-9ef8-ca1f.ngrok-free.app"],  # o ["https://tu-url.ngrok.io"] si quieres limitar
+    allow_origins=["*"],  # Allow all origins in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,7 +35,6 @@ app.add_middleware(
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
-
 
 query_engine = setup_query_engine("ministros.xlsx")
 
