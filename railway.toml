@@ -1,11 +1,12 @@
+# railway.toml  ── Config-as-Code solo acepta [build] y [deploy]
 [build]
-builder = "nixpacks"
+builder      = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug"
-healthcheckPath = "/health"
-healthcheckTimeout = 300
+startCommand        = "uvicorn main:app --host 0.0.0.0 --port $PORT --log-level info"
+healthcheckPath     = "/health"
+healthcheckTimeout  = 300        # 5 min
+restartPolicyType   = "ON_FAILURE"
+restartPolicyMaxRetries = 10
 
-[env]
-PORT = "8000" 
