@@ -3,8 +3,9 @@ builder = "nixpacks"
 buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-startCommand = "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+startCommand = "uvicorn main:app --host 0.0.0.0 --port $PORT --log-level debug"
 healthcheckPath = "/health"
+healthcheckTimeout = 300
 
 [env]
 PORT = "8000" 
